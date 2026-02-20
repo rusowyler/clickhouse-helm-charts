@@ -83,18 +83,8 @@ spec:
             {{- toYaml .Values.clickhouse.lbService.loadBalancerSourceRanges | nindent 12 }}
           {{- end }}
           ports:
-            - name: http
-              port: 8123
-              targetPort: 8123
-            - name: tcp
-              port: 9000
-              targetPort: 9000
-            {{- if .Values.clickhouse.extraPorts }}
-            {{- range .Values.clickhouse.extraPorts }}
-            - name: {{ .name }}
-              port: {{ .containerPort }}
-              targetPort: {{ .containerPort }}
-            {{- end }}
+            {{- if .Values.clickhouse.lbService.ports }}
+                {{- toYaml .Values.clickhouse.lbService.ports | nindent 12 }}
             {{- end }}
           selector:
             {{- include "clickhouse.selectorLabels" . | nindent 12 }}
