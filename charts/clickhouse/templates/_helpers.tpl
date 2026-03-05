@@ -7,6 +7,22 @@ Validations
   {{- end -}}
 {{- end -}}
 
+{{- define "validate.clickhouse.backup" -}}
+  {{- if and .Values.clickhouse.backup.enabled (not .Values.clickhouse.persistence.enabled) }}
+    {{- fail "clickhouse.backup.enabled requires clickhouse.persistence.enabled=true (the sidecar needs the data volume)." }}
+  {{- end }}
+{{- end }}
+
+{{- define "validate.clickhouse.backup.username" -}}
+  {{- if .Values.clickhouse.backup.enabled }}
+    {{- range .Values.clickhouse.users }}
+      {{- if eq .name $.Values.clickhouse.backup.userName }}
+        {{- fail (printf "clickhouse.backup.userName '%s' conflicts with an entry in clickhouse.users[]. Use a different name." $.Values.clickhouse.backup.userName) }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{/*
 Expand the name of the chart.
 */}}
@@ -132,6 +148,9 @@ Pod Template Base
             {{- end }}
             {{- toYaml (list $c) | nindent 12 }}
             {{- end }}
+            {{- if .Values.clickhouse.backup.enabled }}
+            {{- include "clickhouse.backupContainer" . | nindent 12 }}
+            {{- end }}
           {{- if or .Values.clickhouse.initScripts.enabled .Values.clickhouse.extraVolumes }}
           volumes:
             {{- if .Values.clickhouse.initScripts.enabled }}
@@ -160,6 +179,38 @@ Pod Template Base
             {{- toYaml . | nindent 12 }}
           {{- end }}
 {{- end -}}
+
+{{/*
+Backup Sidecar Container
+Renders the clickhouse-backup sidecar container spec when backup is enabled.
+*/}}
+{{- define "clickhouse.backupContainer" -}}
+{{- if .Values.clickhouse.backup.enabled }}
+- name: clickhouse-backup
+  image: "{{ .Values.clickhouse.backup.image.repository }}:{{ .Values.clickhouse.backup.image.tag }}"
+  imagePullPolicy: {{ .Values.clickhouse.backup.image.pullPolicy }}
+  command:
+    - clickhouse-backup
+    - server
+  ports:
+    - name: backup-api
+      containerPort: {{ .Values.clickhouse.backup.port }}
+  {{- with .Values.clickhouse.backup.env }}
+  env:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  volumeMounts:
+    - name: {{ include "clickhouse.volumeClaimTemplateName" . }}
+      mountPath: /var/lib/clickhouse
+  {{- with .Values.clickhouse.backup.extraVolumeMounts }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.clickhouse.backup.resources }}
+  resources:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
 
 {{/*
 Pod Template Name

@@ -1,0 +1,107 @@
+{{- if and .Values.clickhouse.backup.enabled .Values.clickhouse.backup.cronjob.enabled }}
+{{- $fullname := include "clickhouse.fullname" . }}
+{{- $svcName := include "clickhouse.serviceTemplateName" . }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $fullname }}-backup-full
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.clickhouse.backup.cronjob.fullSchedule | quote }}
+  concurrencyPolicy: {{ .Values.clickhouse.backup.cronjob.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.clickhouse.backup.cronjob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.clickhouse.backup.cronjob.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "clickhouse.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.clickhouse.backup.cronjob.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.clickhouse.backup.cronjob.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: backup-full
+              image: curlimages/curl:latest
+              imagePullPolicy: IfNotPresent
+              {{- with .Values.clickhouse.backup.cronjob.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+                  BACKUP_HOST="{{ $svcName }}.${NAMESPACE}.svc.cluster.local"
+                  BACKUP_PORT="{{ .Values.clickhouse.backup.port }}"
+                  BACKUP_NAME="{{ .Values.clickhouse.backup.cronjob.fullBackupName }}-$(date +%Y-%m-%dT%H-%M-%S)"
+                  curl -sf -X POST "http://${BACKUP_HOST}:${BACKUP_PORT}/backup/create?name=${BACKUP_NAME}"
+                  curl -sf -X POST "http://${BACKUP_HOST}:${BACKUP_PORT}/backup/upload/${BACKUP_NAME}"
+{{- if .Values.clickhouse.backup.cronjob.incrementalEnabled }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $fullname }}-backup-incremental
+  labels:
+    {{- include "clickhouse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.clickhouse.backup.cronjob.incrementalSchedule | quote }}
+  concurrencyPolicy: {{ .Values.clickhouse.backup.cronjob.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.clickhouse.backup.cronjob.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.clickhouse.backup.cronjob.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "clickhouse.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          {{- with .Values.clickhouse.backup.cronjob.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.clickhouse.backup.cronjob.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: backup-incremental
+              image: curlimages/curl:latest
+              imagePullPolicy: IfNotPresent
+              {{- with .Values.clickhouse.backup.cronjob.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  NAMESPACE=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)
+                  BACKUP_HOST="{{ $svcName }}.${NAMESPACE}.svc.cluster.local"
+                  BACKUP_PORT="{{ .Values.clickhouse.backup.port }}"
+                  BACKUP_NAME="{{ .Values.clickhouse.backup.cronjob.incrementalBackupName }}-$(date +%Y-%m-%dT%H-%M-%S)"
+                  FULL_BACKUP=$(curl -sf "http://${BACKUP_HOST}:${BACKUP_PORT}/backup/list/remote" \
+                    | grep -o '"name":"{{ .Values.clickhouse.backup.cronjob.fullBackupName }}[^"]*"' \
+                    | tail -1 | cut -d'"' -f4)
+                  curl -sf -X POST "http://${BACKUP_HOST}:${BACKUP_PORT}/backup/create?name=${BACKUP_NAME}&diff-from-remote=${FULL_BACKUP}"
+                  curl -sf -X POST "http://${BACKUP_HOST}:${BACKUP_PORT}/backup/upload/${BACKUP_NAME}"
+{{- end }}
+{{- end }}

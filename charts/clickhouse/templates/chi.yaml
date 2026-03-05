@@ -62,6 +62,11 @@ spec:
               targetPort: {{ .containerPort }}
             {{- end }}
             {{- end }}
+            {{- if and .Values.clickhouse.backup.enabled .Values.clickhouse.backup.exposePort }}
+            - name: backup-api
+              port: {{ .Values.clickhouse.backup.port }}
+              targetPort: {{ .Values.clickhouse.backup.port }}
+            {{- end }}
           selector:
             {{- include "clickhouse.selectorLabels" . | nindent 12 }}
       {{- if .Values.clickhouse.lbService.enabled }}
@@ -85,6 +90,11 @@ spec:
           ports:
             {{- if .Values.clickhouse.lbService.ports }}
                 {{- toYaml .Values.clickhouse.lbService.ports | nindent 12 }}
+            {{- end }}
+            {{- if and .Values.clickhouse.backup.enabled .Values.clickhouse.backup.exposePort }}
+            - name: backup-api
+              port: {{ .Values.clickhouse.backup.port }}
+              targetPort: {{ .Values.clickhouse.backup.port }}
             {{- end }}
           selector:
             {{- include "clickhouse.selectorLabels" . | nindent 12 }}
@@ -167,6 +177,35 @@ spec:
       {{- range $key, $value := .settings }}
       {{ $user }}/{{ $key }}: "{{ $value }}"
       {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.clickhouse.backup.enabled }}
+      {{ .Values.clickhouse.backup.userName }}/networks/ip: {{ .Values.clickhouse.backup.hostIP | quote }}
+      {{ .Values.clickhouse.backup.userName }}/access_management: 0
+      {{ .Values.clickhouse.backup.userName }}/grants/query:
+      - "GRANT SELECT ON system.*"
+      - "GRANT INSERT ON system.backup_actions"
+      - "GRANT INSERT ON system.backup_log"
+      - "GRANT ALTER FREEZE PARTITION ON *.*"
+      - "GRANT ALTER FETCH PARTITION ON *.*"
+      - "GRANT CREATE TABLE ON *.*"
+      - "GRANT DROP TABLE ON *.*"
+      - "GRANT DROP DATABASE ON *.*"
+      - "GRANT CREATE DATABASE ON *.*"
+      {{- if .Values.clickhouse.backup.password_secret_name }}
+      {{ .Values.clickhouse.backup.userName }}/password:
+        valueFrom:
+          secretKeyRef:
+            name: {{ .Values.clickhouse.backup.password_secret_name | quote }}
+            key: password
+      {{- else if .Values.clickhouse.backup.password_sha256_hex }}
+      {{ .Values.clickhouse.backup.userName }}/password_sha256_hex: {{ .Values.clickhouse.backup.password_sha256_hex | quote }}
+      {{- else }}
+      {{ .Values.clickhouse.backup.userName }}/password:
+        valueFrom:
+          secretKeyRef:
+            name: {{ printf "%s-backup-credentials" (include "clickhouse.fullname" .) | quote }}
+            key: password
       {{- end }}
       {{- end }}
     {{- if .Values.clickhouse.profiles }}
@@ -253,3 +292,5 @@ spec:
   {{- end }}
 
 {{ include "validate.clickhouse.keeper" . }}
+{{ include "validate.clickhouse.backup" . }}
+{{ include "validate.clickhouse.backup.username" . }}

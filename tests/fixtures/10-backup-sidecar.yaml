@@ -1,0 +1,44 @@
+---
+# clickhouse-backup sidecar smoke test
+# Verifies that enabling backup injects the sidecar container and creates the backup user
+clickhouse:
+  replicasCount: 1
+  shardsCount: 1
+
+  persistence:
+    enabled: true
+    size: 1Gi
+
+  backup:
+    enabled: true
+    userName: clickhouse_backup
+    password: "BackupPassword123"
+    hostIP: "127.0.0.1/32"
+    port: 7171
+    exposePort: false
+    image:
+      repository: altinity/clickhouse-backup
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    env:
+      - name: LOG_LEVEL
+        value: "info"
+      - name: ALLOW_EMPTY_BACKUPS
+        value: "true"
+      - name: API_LISTEN
+        value: "0.0.0.0:7171"
+      - name: API_CREATE_INTEGRATION_TABLES
+        value: "true"
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+
+keeper:
+  enabled: false
+
+operator:
+  enabled: true

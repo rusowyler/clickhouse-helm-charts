@@ -337,6 +337,150 @@
               "default": true
             }
           }
+        },
+        "backup": {
+          "type": "object",
+          "description": "clickhouse-backup sidecar configuration.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the clickhouse-backup sidecar. Requires persistence.enabled=true.",
+              "default": false
+            },
+            "image": {
+              "type": "object",
+              "properties": {
+                "repository": {
+                  "type": "string",
+                  "description": "Image repository for clickhouse-backup."
+                },
+                "tag": {
+                  "type": "string",
+                  "description": "Image tag for clickhouse-backup."
+                },
+                "pullPolicy": {
+                  "type": "string",
+                  "description": "Image pull policy."
+                }
+              }
+            },
+            "userName": {
+              "type": "string",
+              "description": "Name of the dedicated ClickHouse backup user."
+            },
+            "password": {
+              "type": "string",
+              "description": "Plaintext password for the backup user."
+            },
+            "password_sha256_hex": {
+              "type": "string",
+              "description": "SHA256 hex of the backup user password. Ignored if password_secret_name is set."
+            },
+            "password_secret_name": {
+              "type": "string",
+              "description": "Name of an existing secret containing the backup user password (key: 'password')."
+            },
+            "hostIP": {
+              "type": "string",
+              "description": "Host IP mask for the backup user.",
+              "default": "127.0.0.1/32"
+            },
+            "port": {
+              "type": "integer",
+              "description": "Port for the backup REST API server.",
+              "default": 7171
+            },
+            "exposePort": {
+              "type": "boolean",
+              "description": "Expose the backup API port in ClickHouse service templates.",
+              "default": false
+            },
+            "resources": {
+              "type": "object",
+              "description": "Resource requests/limits for the backup sidecar."
+            },
+            "env": {
+              "type": "array",
+              "description": "Environment variables for the backup sidecar container.",
+              "items": {
+                "type": "object"
+              }
+            },
+            "extraVolumeMounts": {
+              "type": "array",
+              "description": "Additional volume mounts for the backup sidecar.",
+              "items": {
+                "type": "object"
+              }
+            },
+            "cronjob": {
+              "type": "object",
+              "description": "CronJob configuration for scheduled backups.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Create backup CronJob(s).",
+                  "default": false
+                },
+                "fullSchedule": {
+                  "type": "string",
+                  "description": "Cron schedule for full backups.",
+                  "default": "0 0 * * 0"
+                },
+                "incrementalSchedule": {
+                  "type": "string",
+                  "description": "Cron schedule for incremental backups.",
+                  "default": "0 1 * * 1-6"
+                },
+                "incrementalEnabled": {
+                  "type": "boolean",
+                  "description": "Create the incremental backup CronJob.",
+                  "default": true
+                },
+                "concurrencyPolicy": {
+                  "type": "string",
+                  "description": "Concurrency policy for CronJobs.",
+                  "enum": ["Allow", "Forbid", "Replace"],
+                  "default": "Forbid"
+                },
+                "successfulJobsHistoryLimit": {
+                  "type": "integer",
+                  "description": "Successful job history limit.",
+                  "default": 3
+                },
+                "failedJobsHistoryLimit": {
+                  "type": "integer",
+                  "description": "Failed job history limit.",
+                  "default": 3
+                },
+                "fullBackupName": {
+                  "type": "string",
+                  "description": "Prefix for full backup names.",
+                  "default": "full"
+                },
+                "incrementalBackupName": {
+                  "type": "string",
+                  "description": "Prefix for incremental backup names.",
+                  "default": "incremental"
+                },
+                "resources": {
+                  "type": "object",
+                  "description": "Resource requests/limits for CronJob pods."
+                },
+                "nodeSelector": {
+                  "type": "object",
+                  "description": "Node selector for CronJob pods."
+                },
+                "tolerations": {
+                  "type": "array",
+                  "description": "Tolerations for CronJob pods.",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

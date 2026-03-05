@@ -231,18 +231,124 @@ clickhouse:
 
   # -- Extra containers for clickhouse pods
   extraContainers: []
-# If you want to make use of clickhouse data volume, which is the case of clickhouse-backup, you can specify the volumeMounts like this.
-# The value will be automatically replaced.
-
-
-#  extraContainers:
-#    - name: clickhouse-backup
-#      image: altinity/clickhouse-backup:master
-#      mounts:
-#       data: true   # ← “I want to attach clickhouse data volume”
 
   # -- Extra volumes for clickhouse pods
   extraVolumes: []
+
+  # -- clickhouse-backup sidecar configuration.
+  # See https://github.com/Altinity/clickhouse-backup/blob/master/Examples.md#how-to-use-clickhouse-backup-in-kubernetes
+  backup:
+    # -- Whether to deploy clickhouse-backup as a sidecar container.
+    # Requires clickhouse.persistence.enabled to be true.
+    enabled: false
+
+    image:
+      repository: altinity/clickhouse-backup
+      tag: "latest"
+      pullPolicy: IfNotPresent
+
+    # -- Name of the dedicated ClickHouse backup user.
+    userName: "clickhouse_backup"
+
+    # -- Plaintext password for the backup user (not recommended for production).
+    password: ""
+
+    # -- SHA256 hex of the backup user password.
+    # Ignored if password_secret_name is set.
+    password_sha256_hex: ""
+
+    # -- Name of an existing Kubernetes secret containing the backup user password.
+    # The secret must contain a key named 'password'.
+    # Takes precedence over password and password_sha256_hex.
+    password_secret_name: ""
+
+    # -- Host IP mask allowing the backup user to connect.
+    # Defaults to 127.0.0.1/32 since the sidecar communicates over localhost.
+    hostIP: "127.0.0.1/32"
+
+    # -- Port for the backup REST API server.
+    port: 7171
+
+    # -- Whether to expose the backup API port in ClickHouse service templates.
+    exposePort: false
+
+    # -- Resource requests/limits for the backup sidecar container.
+    resources: {}
+
+    # -- Environment variables for the backup sidecar.
+    # Use these to configure remote storage backends and clickhouse-backup options.
+    # Supports the same format as Kubernetes container env (name/value or name/valueFrom).
+    env:
+      - name: LOG_LEVEL
+        value: "info"
+      - name: ALLOW_EMPTY_BACKUPS
+        value: "true"
+      - name: API_LISTEN
+        value: "0.0.0.0:7171"
+      - name: API_CREATE_INTEGRATION_TABLES
+        value: "true"
+      - name: BACKUPS_TO_KEEP_REMOTE
+        value: "3"
+    # env:
+    #   - name: REMOTE_STORAGE
+    #     value: "s3"
+    #   - name: S3_BUCKET
+    #     value: "my-clickhouse-backups"
+    #   - name: S3_REGION
+    #     value: "us-east-1"
+    #   - name: S3_PATH
+    #     value: "backup/shard-{shard}"
+    #   - name: S3_ACCESS_KEY
+    #     valueFrom:
+    #       secretKeyRef:
+    #         name: backup-s3-credentials
+    #         key: access-key
+    #   - name: S3_SECRET_KEY
+    #     valueFrom:
+    #       secretKeyRef:
+    #         name: backup-s3-credentials
+    #         key: secret-key
+
+    # -- Additional volume mounts for the backup sidecar.
+    extraVolumeMounts: []
+
+    # -- CronJob for scheduled backups (full + incremental).
+    cronjob:
+      # -- Whether to create the backup CronJob(s).
+      enabled: false
+
+      # -- Cron schedule for full backups (default: Sundays at midnight).
+      fullSchedule: "0 0 * * 0"
+
+      # -- Cron schedule for incremental backups (default: Mon-Sat at 01:00).
+      incrementalSchedule: "0 1 * * 1-6"
+
+      # -- Whether to also create the incremental backup CronJob.
+      incrementalEnabled: true
+
+      # -- Concurrency policy for both CronJobs.
+      concurrencyPolicy: Forbid
+
+      # -- Successful job history limit.
+      successfulJobsHistoryLimit: 3
+
+      # -- Failed job history limit.
+      failedJobsHistoryLimit: 3
+
+      # -- Prefix for full backup names.
+      fullBackupName: "full"
+
+      # -- Prefix for incremental backup names.
+      incrementalBackupName: "incremental"
+
+      # -- Resource requests/limits for CronJob pods.
+      resources: {}
+
+      # -- Node selector for CronJob pods.
+      nodeSelector: {}
+
+      # -- Tolerations for CronJob pods.
+      tolerations: []
 
   # -- Init scripts ConfigMap configuration
   initScripts:
