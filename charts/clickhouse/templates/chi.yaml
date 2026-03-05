@@ -49,19 +49,7 @@ spec:
         spec:
           type: {{ .Values.clickhouse.service.type }}
           ports:
-            - name: http
-              port: 8123
-              targetPort: 8123
-            - name: tcp
-              port: 9000
-              targetPort: 9000
-            {{- if .Values.clickhouse.extraPorts }}
-            {{- range .Values.clickhouse.extraPorts }}
-            - name: {{ .name }}
-              port: {{ .containerPort }}
-              targetPort: {{ .containerPort }}
-            {{- end }}
-            {{- end }}
+            {{- toYaml .Values.clickhouse.service.ports | nindent 12 }}
             {{- if and .Values.clickhouse.backup.enabled .Values.clickhouse.backup.exposePort }}
             - name: backup-api
               port: {{ .Values.clickhouse.backup.port }}

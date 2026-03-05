@@ -117,9 +117,6 @@ Pod Template Base
                   containerPort: 9000
                 - name: interserver
                   containerPort: 9009
-                {{- if .Values.clickhouse.extraPorts }}
-                {{- toYaml .Values.clickhouse.extraPorts | nindent 16 }}
-                {{- end }}
               {{- with .Values.clickhouse.livenessProbe }}
               livenessProbe:
                 {{- toYaml . | nindent 16 }}
