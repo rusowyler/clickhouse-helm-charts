@@ -3,6 +3,23 @@ entries:
   clickhouse:
   - apiVersion: v2
     appVersion: 25.3.6.10034
+    created: "2026-03-10T01:34:20.258220772Z"
+    dependencies:
+    - alias: operator
+      condition: operator.enabled
+      name: altinity-clickhouse-operator
+      repository: https://helm.altinity.com
+      version: 0.25.6
+    description: A Helm chart for creating a ClickHouse® Cluster with the Altinity
+      Operator for ClickHouse
+    digest: c1b82923d9047c62945463d2a2e3bf80ce7c31ef19f7830e332f0df57b2d923f
+    name: clickhouse
+    type: application
+    urls:
+    - https://github.com/rusowyler/clickhouse-helm-charts/releases/download/clickhouse-0.4.1/clickhouse-0.4.1.tgz
+    version: 0.4.1
+  - apiVersion: v2
+    appVersion: 25.3.6.10034
     created: "2026-03-05T20:26:37.165812714Z"
     dependencies:
     - alias: operator
@@ -30,4 +47,4 @@ entries:
     urls:
     - https://github.com/rusowyler/clickhouse-helm-charts/releases/download/clickhouse-eks-0.1.9/clickhouse-eks-0.1.9.tgz
     version: 0.1.9
-generated: "2026-03-05T20:26:37.492484079Z"
+generated: "2026-03-10T01:34:20.258247842Z"
