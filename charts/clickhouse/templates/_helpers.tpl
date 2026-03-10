@@ -192,10 +192,25 @@ Renders the clickhouse-backup sidecar container spec when backup is enabled.
   ports:
     - name: backup-api
       containerPort: {{ .Values.clickhouse.backup.port }}
-  {{- with .Values.clickhouse.backup.env }}
   env:
+    - name: CLICKHOUSE_USERNAME
+      value: {{ .Values.clickhouse.backup.userName | quote }}
+    {{- if .Values.clickhouse.backup.password_secret_name }}
+    - name: CLICKHOUSE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.clickhouse.backup.password_secret_name | quote }}
+          key: password
+    {{- else if not .Values.clickhouse.backup.password_sha256_hex }}
+    - name: CLICKHOUSE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ printf "%s-backup-credentials" (include "clickhouse.fullname" .) | quote }}
+          key: password
+    {{- end }}
+    {{- with .Values.clickhouse.backup.env }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
   volumeMounts:
     - name: {{ include "clickhouse.volumeClaimTemplateName" . }}
       mountPath: /var/lib/clickhouse
