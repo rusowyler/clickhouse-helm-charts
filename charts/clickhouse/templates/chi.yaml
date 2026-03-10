@@ -180,6 +180,7 @@ spec:
       - "GRANT DROP TABLE ON *.*"
       - "GRANT DROP DATABASE ON *.*"
       - "GRANT CREATE DATABASE ON *.*"
+      - "GRANT TABLE ENGINE ON URL"
       {{- if .Values.clickhouse.backup.password_secret_name }}
       {{ .Values.clickhouse.backup.userName }}/password:
         valueFrom:
