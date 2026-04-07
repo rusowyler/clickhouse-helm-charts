@@ -387,6 +387,10 @@ keeper:
     storageClass: ""
   nodeSelector: {}
   tolerations: []
+  
+  # @ignore
+  affinity: {}
+  
   podAnnotations: {}
   volumeClaimAnnotations: {}
   # topologySpreadConstraints over `zone`, by deafult there is only
